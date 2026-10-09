@@ -1,0 +1,18 @@
+# Node
+node_modules/
+.next/
+out/
+
+# Python
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+EOF
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
