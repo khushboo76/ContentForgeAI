@@ -28,7 +28,7 @@ class FallbackError(RuntimeError):
     """Raised when a fallback provider call fails or returns unusable output."""
 
 
-def _providers() -> list[dict]:
+def _providers(provider_names: list[str] | None = None) -> list[dict]:
     registry = {
         "mistral": {
             "name": "mistral",
@@ -43,9 +43,10 @@ def _providers() -> list[dict]:
             "model": config.GROQ_MODEL,
         },
     }
+    names = provider_names if provider_names is not None else config.FALLBACK_ORDER
     return [
         registry[name]
-        for name in config.FALLBACK_ORDER
+        for name in names
         if name in registry and registry[name]["api_key"]
     ]
 
@@ -126,12 +127,17 @@ async def _call_provider(provider: dict, messages: list[dict], use_json_mode: bo
         raise FallbackError(f"{provider['name']} returned an unexpected response shape") from exc
 
 
-async def generate_json(system_instruction: str, source_content: str, schema: dict) -> dict:
+async def generate_json(
+    system_instruction: str,
+    source_content: str,
+    schema: dict,
+    provider_names: list[str] | None = None,
+) -> dict:
     """
     Generates structured output via the first working fallback provider.
     Raises FallbackError if none are configured or all of them fail.
     """
-    providers = _providers()
+    providers = _providers(provider_names)
     if not providers:
         raise FallbackError(
             "No fallback provider configured — set MISTRAL_API_KEY or GROQ_API_KEY in backend/.env"

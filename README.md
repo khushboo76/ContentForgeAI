@@ -1,7 +1,7 @@
 # AI Content Transformation Platform
 
 Converts a single source of content (text, document, image, video, or free-form prompt)
-into multiple operator-selected deliverables: LinkedIn posts, Twitter/X posts, advisories,
+into multiple operator-selected deliverables: LinkedIn posts, advisories,
 executive summaries, presentations, infographic content, and video packages (script,
 storyboard, narration, subtitles).
 

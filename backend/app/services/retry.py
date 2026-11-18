@@ -12,8 +12,11 @@ T = TypeVar("T")
 
 
 class RateLimitError(Exception):
-    """Raised when the underlying API signals a 429 / quota exceeded."""
-    pass
+    """Raised when the underlying provider has a transient availability issue."""
+
+
+class ImmediateFallbackError(RateLimitError):
+    """An error for which retrying the primary provider cannot help."""
 
 
 def with_backoff(
@@ -33,6 +36,8 @@ def with_backoff(
             for attempt in range(max_retries + 1):
                 try:
                     return await fn(*args, **kwargs)
+                except ImmediateFallbackError:
+                    raise
                 except RateLimitError as exc:
                     last_exc = exc
                     if attempt == max_retries:

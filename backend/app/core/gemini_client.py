@@ -3,11 +3,9 @@ Wraps calls to the Gemini API: sends a system instruction + source content,
 requests structured JSON output matching a given schema.
 
 Resilience:
-- Transient failures (429 rate limit, 500/502/503/504 overload, timeouts) are
-  retried with exponential backoff (see services/retry.py).
-- If Gemini is still failing, `generate()` switches to a fallback provider
-  (Mistral/Groq, see llm_fallback.py) for text-only requests, and
-  `extract_url_text()` fetches the page locally (see url_fetcher.py).
+- Text generation uses Groq first, then Gemini if Groq is unavailable.
+- Transient Gemini failures (429 rate limit, 500/502/503/504 overload,
+  timeouts) are retried with exponential backoff (see services/retry.py).
 
 Also provides:
 - extract_url_text: uses Gemini's url_context tool to fetch and read a URL.
@@ -31,7 +29,7 @@ from app.core.config import (
     GEMINI_MAX_RETRIES,
     GEMINI_MODEL,
 )
-from app.services.retry import RateLimitError, with_backoff
+from app.services.retry import ImmediateFallbackError, RateLimitError, with_backoff
 from app.services.url_fetcher import fetch_url_text
 
 logger = logging.getLogger(__name__)
@@ -46,13 +44,21 @@ TRANSIENT_MARKERS = (
     "high demand",
     "overloaded",
 )
+QUOTA_MARKERS = (
+    "resource_exhausted",
+    "quota exceeded",
+    "quota_exceeded",
+    "exceeded your current quota",
+    "rate limit",
+    "rate_limit",
+)
 
 
 def _get_client() -> genai.Client:
     global _client
     if _client is None:
         if not GEMINI_API_KEY:
-            raise RuntimeError("GEMINI_API_KEY is not set — copy .env.example to .env and add your key.")
+            raise ImmediateFallbackError("GEMINI_API_KEY is not set")
         _client = genai.Client(api_key=GEMINI_API_KEY)
     return _client
 
@@ -66,10 +72,13 @@ def _raise_if_transient(exc: Exception) -> None:
     """
     status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
     text = str(exc)
+    normalized_text = text.lower()
+    if status == 429 or any(marker in normalized_text for marker in QUOTA_MARKERS):
+        raise ImmediateFallbackError(text) from exc
     if (
         status in TRANSIENT_STATUS_CODES
         or isinstance(exc, (httpx.TimeoutException, httpx.ConnectError))
-        or any(marker in text.lower() for marker in TRANSIENT_MARKERS)
+        or any(marker in normalized_text for marker in TRANSIENT_MARKERS)
     ):
         raise RateLimitError(text) from exc
     raise exc
@@ -116,29 +125,32 @@ async def generate(
     """
     Generates structured output conforming to `schema`. Returns the parsed dict.
 
-    Tries Gemini first (with retries). If Gemini is still unavailable and the
-    request is text-only, falls back to Mistral/Groq. media_parts, when given,
-    are passed to Gemini as native multimodal input (Gemini-only).
+    Tries Groq first for text-only requests, then Gemini (with retries) if
+    Groq is unavailable. media_parts are always passed to Gemini because
+    Groq cannot process images or video.
     """
-    try:
-        return await _gemini_generate(system_instruction, source_content, schema, media_parts)
-    except RateLimitError as gemini_exc:
-        if media_parts or not source_content:
-            raise  # fallback providers can't read images/video
-
-        if not llm_fallback.is_configured():
-            raise RateLimitError(
-                f"{gemini_exc}\n\nNo fallback provider is configured — set MISTRAL_API_KEY "
-                "or GROQ_API_KEY in backend/.env to survive Gemini outages."
-            ) from gemini_exc
-
-        logger.warning("Gemini unavailable (%s); switching to fallback provider", gemini_exc)
+    groq_notice: str | None = None
+    if not media_parts and source_content:
         try:
-            return await llm_fallback.generate_json(system_instruction, source_content, schema)
-        except llm_fallback.FallbackError as fallback_exc:
-            raise RuntimeError(
-                f"Gemini unavailable: {gemini_exc}\nFallback failed: {fallback_exc}"
-            ) from fallback_exc
+            return await llm_fallback.generate_json(
+                system_instruction,
+                source_content,
+                schema,
+                provider_names=["groq"],
+            )
+        except llm_fallback.FallbackError as groq_exc:
+            groq_notice = (
+                "Groq could not generate this output, so Gemini was used instead. "
+                f"Details: {groq_exc}"
+            )
+
+    try:
+        data = await _gemini_generate(system_instruction, source_content, schema, media_parts)
+        if groq_notice:
+            data["_generation_notice"] = groq_notice
+        return data
+    except RateLimitError as gemini_exc:
+        raise RuntimeError(f"Groq was unavailable and Gemini failed: {gemini_exc}") from gemini_exc
 
 
 # ----------------------------------------------------------------------------

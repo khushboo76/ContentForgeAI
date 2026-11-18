@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
 from app.core.database import init_db
+from app.core import config
 
 
 @asynccontextmanager
@@ -16,7 +17,7 @@ app = FastAPI(title="Content Transformation Platform API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[config.FRONTEND_URL],
     allow_methods=["*"],
     allow_headers=["*"],
 )

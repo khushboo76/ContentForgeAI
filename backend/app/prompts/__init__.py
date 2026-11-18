@@ -6,22 +6,20 @@ then registering it here — nothing else in the pipeline needs to change.
 """
 from app.prompts import (
     linkedin_post,
-    twitter_post,
     advisory,
     executive_summary,
     presentation,
     infographic,
-    video_package,
+    email,
 )
 
 REGISTRY = {
     "linkedin_post": linkedin_post,
-    "twitter_post": twitter_post,
     "advisory": advisory,
     "executive_summary": executive_summary,
     "presentation": presentation,
     "infographic": infographic,
-    "video_package": video_package,
+    "email": email,
 }
 
 

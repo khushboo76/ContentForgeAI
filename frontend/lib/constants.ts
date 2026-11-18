@@ -3,12 +3,11 @@
 
 export const OUTPUT_TYPE_LABELS: Record<string, string> = {
   linkedin_post: "LinkedIn Post",
-  twitter_post: "Twitter / X Post",
   advisory: "Advisory",
   executive_summary: "Executive Summary",
   presentation: "Presentation",
   infographic: "Infographic",
-  video_package: "Video Package",
+  email: "Email Draft",
 };
 
 export const TONE_OPTIONS = [

@@ -44,7 +44,7 @@ This platform is an AI-powered content transformation engine: an operator submit
 | ID | Requirement |
 |----|-------------|
 | FR-1 | Operator can submit source content as text, pasted text, or an uploaded document/image/video via the dashboard |
-| FR-2 | Operator can select one or more output types via configurable checkboxes: Video Package, LinkedIn Post, Twitter/X Post(s), Advisory, Infographic Content, Executive Summary, Presentation |
+| FR-2 | Operator can select one or more output types via configurable checkboxes: Video Package, LinkedIn Post, Advisory, Infographic Content, Executive Summary, Presentation |
 | FR-3 | Operator can configure generation parameters: tone, sentiment, target audience, language, level of detail, communication objective |
 | FR-4 | System analyzes source content once and reuses that understanding across all selected output types (single context, multiple generations) |
 | FR-5 | System generates one structured deliverable per selected output type, each following a format-specific schema |
@@ -62,7 +62,6 @@ Multi-select cards, each mapped to a distinct prompt template and JSON output sc
 
 - **Video Package** → script, storyboard, scene-by-scene descriptions, narration text, subtitles, visual recommendations
 - **LinkedIn Post** → publication-ready post with hook, body, hashtags, suggested CTA
-- **Twitter/X Post(s)** → single post or thread, platform length constraints applied
 - **Advisory** → structured advisory (situation, impact, recommended actions, severity)
 - **Infographic** → key messages, section breakdown, layout/visual-hierarchy recommendations
 - **Executive Summary** → concise briefing with key findings and recommendations

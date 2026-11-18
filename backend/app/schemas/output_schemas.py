@@ -11,10 +11,6 @@ class LinkedInPostOutput(BaseModel):
     cta: Optional[str] = None
 
 
-class TwitterPostOutput(BaseModel):
-    posts: List[str]  # single post or thread
-
-
 class AdvisoryOutput(BaseModel):
     situation: str
     impact: str
@@ -44,14 +40,8 @@ class InfographicOutput(BaseModel):
     layout_recommendations: str
 
 
-class VideoScene(BaseModel):
-    scene_number: int
-    description: str
-    narration: str
-    subtitle: str
-
-
-class VideoPackageOutput(BaseModel):
-    script: str
-    storyboard: List[VideoScene]
-    visual_recommendations: str
+class EmailOutput(BaseModel):
+    subject: str
+    body: str
+    key_points: List[str]
+    call_to_action: Optional[str] = None
